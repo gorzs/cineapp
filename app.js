@@ -19,29 +19,28 @@ dotenv.config();
 
 const app = express();
 
-const cors = require('cors');
-
+// ✅ CORS configurado correctamente
 const corsOptions = {
-  origin: 'https://lightgrey-jay-885399.hostingersite.com', // tu dominio frontend
+  origin: 'https://lightgrey-jay-885399.hostingersite.com',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
-
 app.use(cors(corsOptions));
 
-// Comprimir todas las respuestas
+// ✅ Permitir preflight OPTIONS requests
+app.options('*', cors(corsOptions));
+
+// Middleware
 app.use(compression());
 
-// Logging en desarrollo
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Limitar peticiones (rate limiting)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // limitar a 100 peticiones
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Demasiadas peticiones desde esta IP, por favor intente de nuevo después de 15 minutos',
@@ -54,12 +53,10 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Middleware para parsear el body
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser(process.env.SESSION_SECRET));
 
-// Configuración de sesiones
 app.use(session({
   genid: (req) => uuidv4(),
   secret: process.env.SESSION_SECRET,
@@ -68,18 +65,16 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 1 día
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
-// Prevenir XSS
 app.use(xssClean());
 
-// Rutas API
+// Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/movies', movieRoutes);
 
-// Ruta principal
 app.get('/', (req, res) => {
   res.json({
     status: 'success',
@@ -87,7 +82,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Manejar rutas no encontradas
 app.all('*', (req, res, next) => {
   const err = new Error(`No se encontró la ruta: ${req.originalUrl}`);
   err.statusCode = 404;
@@ -95,6 +89,4 @@ app.all('*', (req, res, next) => {
   next(err);
 });
 
-// Middleware para manejar errores
 app.use(errorHandler);
-
