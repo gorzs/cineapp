@@ -19,14 +19,17 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Configuración de CORS con dominio correcto
+const cors = require('cors');
+
 const corsOptions = {
-  origin: 'https://lightgrey-jay-885399.hostingersite.com',
+  origin: 'https://lightgrey-jay-885399.hostingersite.com', // tu dominio frontend
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
+
 app.use(cors(corsOptions));
+
 // Comprimir todas las respuestas
 app.use(compression());
 
