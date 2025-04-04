@@ -1,4 +1,15 @@
 const express = require('express');
+const app = express();
+
+// ✅ CORS configurado correctamente
+const corsOptions = {
+  origin: 'https://lightgrey-jay-885399.hostingersite.com',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 const helmet = require('helmet');
 const xssClean = require('xss-clean');
 const cors = require('cors');
@@ -17,19 +28,7 @@ const errorHandler = require('./middleware/errorHandler');
 
 dotenv.config();
 
-const app = express();
 
-// ✅ CORS configurado correctamente
-const corsOptions = {
-  origin: 'https://lightgrey-jay-885399.hostingersite.com',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
-app.use(cors(corsOptions));
-
-// ✅ Permitir preflight OPTIONS requests
-app.options('*', cors(corsOptions));
 
 // Middleware
 app.use(compression());
