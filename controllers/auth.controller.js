@@ -167,19 +167,6 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Verificar intentos de inicio de sesión (prevención de fuerza bruta)
-    try {
-      await query('CALL check_login_attempts(?, ?)', [req.ip, email]);
-    } catch (error) {
-      if (error.sqlState === '45000') {
-        return res.status(429).json({
-          status: 'error',
-          message: error.message
-        });
-      }
-      throw error;
-    }
-
     // Registrar inicio de sesión exitoso
     await query(
       'INSERT INTO login_attempts (ip_address, email, success) VALUES (?, ?, TRUE)',
