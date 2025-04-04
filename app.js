@@ -28,6 +28,11 @@ const errorHandler = require('./middleware/errorHandler');
 
 dotenv.config();
 
+// Middleware personalizado para debug
+app.use((req, res, next) => {
+  console.log(`[CORS DEBUG] ${req.method} ${req.path}`);
+  next();
+});
 
 
 // Middleware
