@@ -1,15 +1,15 @@
 const express = require('express');
 const app = express();
-
-// ✅ CORS configurado correctamente
 const corsOptions = {
-  origin: 'https://lightgrey-jay-885399.hostingersite.com',
-  credentials: true,
+  origin: '*', // ⚠️ CORS abierto solo para pruebas
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false // ⚠️ IMPORTANTE: no puedes usar credentials:true con origin '*'
 };
+
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+
 const helmet = require('helmet');
 const xssClean = require('xss-clean');
 const cors = require('cors');
