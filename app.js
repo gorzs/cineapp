@@ -2,10 +2,16 @@ const express = require('express');
 const helmet = require('helmet');
 const xssClean = require('xss-clean');
 const cors = require('cors');
+
+const allowedOrigins = [
+  'https://lightgrey-jay-885399.hostingersite.com'
+];
+
 app.use(cors({
-  origin: 'https://lightgrey-jay-885399.hostingersite.com', // Tu dominio frontend exacto
+  origin: allowedOrigins,
   credentials: true
 }));
+
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
