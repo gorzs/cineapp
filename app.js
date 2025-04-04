@@ -27,5 +27,71 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));
+// Comprimir todas las respuestas
+app.use(compression());
 
-// ... (el resto igual)
+// Logging en desarrollo
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
+
+// Limitar peticiones (rate limiting)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // limitar a 100 peticiones
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Demasiadas peticiones desde esta IP, por favor intente de nuevo después de 15 minutos',
+  handler: (req, res, next, options) => {
+    res.status(429).json({
+      status: 'error',
+      message: options.message
+    });
+  }
+});
+app.use('/api/', limiter);
+
+// Middleware para parsear el body
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(cookieParser(process.env.SESSION_SECRET));
+
+// Configuración de sesiones
+app.use(session({
+  genid: (req) => uuidv4(),
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 1 día
+  }
+}));
+
+// Prevenir XSS
+app.use(xssClean());
+
+// Rutas API
+app.use('/api/auth', authRoutes);
+app.use('/api/movies', movieRoutes);
+
+// Ruta principal
+app.get('/', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'API de películas funcionando correctamente'
+  });
+});
+
+// Manejar rutas no encontradas
+app.all('*', (req, res, next) => {
+  const err = new Error(`No se encontró la ruta: ${req.originalUrl}`);
+  err.statusCode = 404;
+  err.status = 'error';
+  next(err);
+});
+
+// Middleware para manejar errores
+app.use(errorHandler);
+
