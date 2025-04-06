@@ -183,6 +183,10 @@ exports.updateMovie = async (req, res, next) => {
       [title, director, year, genre, plot, poster_url, rating, id]
     );
 
+    await query(
+  `UPDATE movies SET poster_url = REPLACE(poster_url, '&#x2F;', '/') WHERE poster_url LIKE '%/%'
+  );
+
     const updatedMovie = await query(
       `SELECT m.*, u.username as creator_username FROM movies m JOIN users u ON m.user_id = u.id WHERE m.id = ?`,
       [id]
