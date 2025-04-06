@@ -8,7 +8,6 @@ const stripHtmlTags = (input = '') => {
   return xss(input.replace(/<[^>]*>/g, '')).trim();
 };
 
-
 // Crear una nueva película
 exports.createMovie = async (req, res, next) => {
   try {
@@ -22,7 +21,9 @@ exports.createMovie = async (req, res, next) => {
     const year = parseInt(req.body.year, 10);
     const genre = stripHtmlTags(req.body.genre);
     const plot = req.body.plot ? stripHtmlTags(req.body.plot) : null;
-    const poster_url = req.body.poster_url ? stripHtmlTags(req.body.poster_url) : null;
+    const poster_url = req.body.poster_url
+      ? stripHtmlTags(req.body.poster_url).replace(/&#x2F;/g, '/')
+      : null;
     const rating = parseFloat(req.body.rating || 0);
 
     const result = await query(
@@ -74,7 +75,9 @@ exports.updateMovie = async (req, res, next) => {
     const year = parseInt(req.body.year, 10);
     const genre = stripHtmlTags(req.body.genre);
     const plot = req.body.plot ? stripHtmlTags(req.body.plot) : null;
-    const poster_url = req.body.poster_url ? stripHtmlTags(req.body.poster_url) : null;
+    const poster_url = req.body.poster_url
+      ? stripHtmlTags(req.body.poster_url).replace(/&#x2F;/g, '/')
+      : null;
     const rating = parseFloat(req.body.rating || 0);
 
     await query(
