@@ -1,9 +1,6 @@
 const { query } = require('../config/database');
 const { validationResult } = require('express-validator');
 const xss = require('xss');
-
-// Función para eliminar etiquetas HTML por completo
-const xss = require('xss');
 const he = require('he');
 
 const sanitizeInput = (input = '') => {
