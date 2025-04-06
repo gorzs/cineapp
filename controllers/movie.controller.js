@@ -2,6 +2,7 @@ const { query } = require('../config/database');
 const { validationResult } = require('express-validator');
 const xss = require('xss');
 
+
 // Obtener todas las películas
 exports.getAllMovies = async (req, res, next) => {
   try {
