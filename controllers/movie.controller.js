@@ -2,8 +2,8 @@ const { query } = require('../config/database');
 const { validationResult } = require('express-validator');
 const xss = require('xss');
 
-// Función para eliminar etiquetas HTML por completo
-const stripHtmlTags = (input) => {
+// Función para eliminar etiquetas HTML por completo\const stripHtmlTags = (input = '') => {
+  if (typeof input !== 'string') return '';
   return xss(input.replace(/<[^>]*>/g, '')).trim();
 };
 
