@@ -5,8 +5,9 @@ const xss = require('xss');
 // Función para eliminar etiquetas HTML por completo
 const sanitizeInput = (input = '') => {
   if (typeof input !== 'string') return '';
-  return xss(input.replace(/<[^>]*>/g, '')).trim();
+  return input.replace(/<[^>]*>/g, '').trim();
 };
+
 
 // Obtener todas las películas
 exports.getAllMovies = async (req, res, next) => {
