@@ -7,9 +7,18 @@ const he = require('he'); // Asegúrate de instalar esto: npm install he
 
 const sanitizeInput = (input = '') => {
   if (typeof input !== 'string') return '';
-  // Elimina cualquier etiqueta HTML junto con su contenido si es inline
-  const cleaned = input.replace(/<[^>]*>/g, '');
-  return cleaned.trim();
+
+  // Remueve etiquetas como <script>...</script> completamente
+  input = input.replace(/<script.*?>.*?<\/script>/gi, '');
+  input = input.replace(/<style.*?>.*?<\/style>/gi, '');
+
+  // Remueve cualquier etiqueta HTML que quede
+  input = input.replace(/<\/?[^>]+(>|$)/g, '');
+
+  // Elimina entidades HTML codificadas (como &lt;)
+  input = input.replace(/&[^;]+;/g, '');
+
+  return input.trim();
 };
 
 
