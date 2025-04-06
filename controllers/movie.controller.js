@@ -5,21 +5,24 @@ const xss = require('xss');
 // Función para eliminar etiquetas HTML por completo
 const he = require('he'); // Asegúrate de instalar esto: npm install he
 
+const he = require('he');
+
 const sanitizeInput = (input = '') => {
   if (typeof input !== 'string') return '';
 
-  // Remueve etiquetas completas como <script>...</script> y <style>...</style>
+  // Primero decodifica las entidades HTML como &lt;script&gt;
+  input = he.decode(input);
+
+  // Elimina etiquetas como <script>...</script> y <style>...</style>
   input = input.replace(/<script.*?>.*?<\/script>/gis, '');
   input = input.replace(/<style.*?>.*?<\/style>/gis, '');
 
-  // Remueve cualquier otra etiqueta HTML (<div>, <b>, etc.)
+  // Elimina cualquier otra etiqueta HTML como <b>, <i>, etc.
   input = input.replace(/<\/?[^>]+(>|$)/g, '');
-
-  // Remueve entidades HTML excepto las que contienen /
-  input = input.replace(/&(?!(#x2F;|sol;)).+?;/g, '');
 
   return input.trim();
 };
+
 
 
 // Obtener todas las películas
