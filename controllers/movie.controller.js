@@ -3,13 +3,18 @@ const { validationResult } = require('express-validator');
 const xss = require('xss');
 
 // Función para eliminar etiquetas HTML por completo
+const he = require('he'); // Asegúrate de instalar esto: npm install he
+
 const sanitizeInput = (input = '') => {
   if (typeof input !== 'string') return '';
-  // Elimina cualquier etiqueta HTML y su contenido (como <script>...</script>)
-  return input
-    .replace(/<[^>]+>.*?<\/[^>]+>/gs, '') // elimina etiquetas con contenido
-    .replace(/<[^>]*>/g, '')              // elimina etiquetas sueltas
-    .trim();
+
+  // 1. Decodifica entidades como &amp;lt; → < y &amp;gt; → >
+  const decoded = he.decode(input);
+
+  // 2. Elimina etiquetas HTML con su contenido (ej. <script>algo</script>)
+  const noTags = decoded.replace(/<[^>]+>.*?<\/[^>]+>/gs, '').replace(/<[^>]*>/g, '');
+
+  return noTags.trim();
 };
 
 
