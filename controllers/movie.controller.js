@@ -7,16 +7,10 @@ const he = require('he'); // Asegúrate de instalar esto: npm install he
 
 const sanitizeInput = (input = '') => {
   if (typeof input !== 'string') return '';
-
-  // 1. Decodifica entidades como &amp;lt; → < y &amp;gt; → >
-  const decoded = he.decode(input);
-
-  // 2. Elimina etiquetas HTML con su contenido (ej. <script>algo</script>)
-  const noTags = decoded.replace(/<[^>]+>.*?<\/[^>]+>/gs, '').replace(/<[^>]*>/g, '');
-
-  return noTags.trim();
+  // Elimina cualquier etiqueta HTML junto con su contenido si es inline
+  const cleaned = input.replace(/<[^>]*>/g, '');
+  return cleaned.trim();
 };
-
 
 
 // Obtener todas las películas
