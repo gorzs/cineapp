@@ -5,8 +5,6 @@ const xss = require('xss');
 // Función para eliminar etiquetas HTML por completo
 const he = require('he'); // Asegúrate de instalar esto: npm install he
 
-const he = require('he');
-
 const sanitizeInput = (input = '') => {
   if (typeof input !== 'string') return '';
 
