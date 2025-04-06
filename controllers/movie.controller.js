@@ -8,18 +8,19 @@ const he = require('he'); // Asegúrate de instalar esto: npm install he
 const sanitizeInput = (input = '') => {
   if (typeof input !== 'string') return '';
 
-  // Remueve etiquetas como <script>...</script> completamente
-  input = input.replace(/<script.*?>.*?<\/script>/gi, '');
-  input = input.replace(/<style.*?>.*?<\/style>/gi, '');
+  // Remueve etiquetas completas como <script>...</script> y <style>...</style>
+  input = input.replace(/<script.*?>.*?<\/script>/gis, '');
+  input = input.replace(/<style.*?>.*?<\/style>/gis, '');
 
-  // Remueve cualquier etiqueta HTML que quede
+  // Remueve cualquier otra etiqueta HTML (<div>, <b>, etc.)
   input = input.replace(/<\/?[^>]+(>|$)/g, '');
 
-  // Elimina entidades HTML codificadas (como &lt;)
-  input = input.replace(/&[^;]+;/g, '');
+  // Remueve entidades HTML excepto las que contienen /
+  input = input.replace(/&(?!(#x2F;|sol;)).+?;/g, '');
 
   return input.trim();
 };
+
 
 // Obtener todas las películas
 exports.getAllMovies = async (req, res, next) => {
@@ -195,7 +196,7 @@ exports.updateMovie = async (req, res, next) => {
       [title, director, year, genre, plot, poster_url, rating, id]
     );
 
-    //await query(`UPDATE movies SET poster_url = REPLACE(poster_url, '&#x2F;', '/') WHERE poster_url LIKE '%&#x2F;%'`);
+    await query(`UPDATE movies SET poster_url = REPLACE(poster_url, '&#x2F;', '/') WHERE poster_url LIKE '%&#x2F;%'`);
 
 
     const updatedMovie = await query(
