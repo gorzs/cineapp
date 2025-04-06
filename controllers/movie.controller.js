@@ -1,26 +1,16 @@
 const { query } = require('../config/database');
 const { validationResult } = require('express-validator');
-const xss = require('xss');
 const he = require('he');
 
+// Elimina cualquier HTML y sus contenidos (incluyendo si viene codificado como &lt;script&gt;)
 const sanitizeInput = (input = '') => {
   if (typeof input !== 'string') return '';
-
-  // 1. Decodifica entidades HTML (como &lt;script&gt;)
-  input = he.decode(input);
-
-  // 2. Elimina <script> y <style> completamente
-  input = input.replace(/<script.*?>.*?<\/script>/gis, '');
-  input = input.replace(/<style.*?>.*?<\/style>/gis, '');
-
-  // 3. Elimina cualquier etiqueta HTML restante
-  input = input.replace(/<\/?[^>]+(>|$)/g, '');
-
-  // 4. Sanitiza con xss para asegurarte que no queden residuos
-  return xss(input.trim());
+  let decoded = he.decode(input); // Decodifica entidades como &lt;
+  decoded = decoded.replace(/<script.*?>.*?<\/script>/gis, '');
+  decoded = decoded.replace(/<style.*?>.*?<\/style>/gis, '');
+  decoded = decoded.replace(/<\/?[^>]+(>|$)/g, ''); // Cualquier etiqueta HTML
+  return decoded.trim();
 };
-
-
 
 // Obtener todas las películas
 exports.getAllMovies = async (req, res, next) => {
