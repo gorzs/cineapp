@@ -8,26 +8,18 @@ const he = require('he'); // Asegúrate de instalar esto: npm install he
 const sanitizeInput = (input = '') => {
   if (typeof input !== 'string') return '';
 
-  // Eliminar contenido completo de etiquetas potencialmente peligrosas
-  const tagsToRemoveCompletely = [
-    'script', 'style', 'iframe', 'object', 'embed', 'link', 'meta', 'base', 'noscript','html'
-  ];
+  // Remueve etiquetas como <script>...</script> completamente
+  input = input.replace(/<script.*?>.*?<\/script>/gi, '');
+  input = input.replace(/<style.*?>.*?<\/style>/gi, '');
 
-  for (const tag of tagsToRemoveCompletely) {
-    const regex = new RegExp(`<${tag}.*?>.*?<\\/${tag}>`, 'gis');
-    input = input.replace(regex, '');
-  }
-
-  // Eliminar cualquier etiqueta HTML que quede (como <b>, <i>, <div>, etc.)
+  // Remueve cualquier etiqueta HTML que quede
   input = input.replace(/<\/?[^>]+(>|$)/g, '');
 
-  // Eliminar entidades HTML codificadas (&lt;, &gt;, etc.)
+  // Elimina entidades HTML codificadas (como &lt;)
   input = input.replace(/&[^;]+;/g, '');
 
   return input.trim();
 };
-
-
 
 // Obtener todas las películas
 exports.getAllMovies = async (req, res, next) => {
