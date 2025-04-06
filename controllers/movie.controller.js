@@ -2,20 +2,20 @@ const { query } = require('../config/database');
 const { validationResult } = require('express-validator');
 const xss = require('xss');
 
+// Función para eliminar etiquetas HTML por completo
+const sanitizeInput = (input = '') => {
+  if (typeof input !== 'string') return '';
+  return xss(input.replace(/<[^>]*>/g, '')).trim();
+};
 
 // Obtener todas las películas
 exports.getAllMovies = async (req, res, next) => {
   try {
-    // Validar datos de entrada
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: 'error',
-        errors: errors.array()
-      });
+      return res.status(400).json({ status: 'error', errors: errors.array() });
     }
 
-    // Parámetros para filtrado y paginación
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const offset = (page - 1) * limit;
@@ -23,71 +23,54 @@ exports.getAllMovies = async (req, res, next) => {
     let whereClause = '';
     let queryParams = [];
 
-    // Filtro por título
     if (req.query.title) {
       whereClause += ' AND m.title LIKE ?';
-      queryParams.push(%${req.query.title}%);
+      queryParams.push(`%${req.query.title}%`);
     }
 
-    // Filtro por director
     if (req.query.director) {
       whereClause += ' AND m.director LIKE ?';
-      queryParams.push(%${req.query.director}%);
+      queryParams.push(`%${req.query.director}%`);
     }
 
-    // Filtro por año
     if (req.query.year) {
       whereClause += ' AND m.year = ?';
       queryParams.push(req.query.year);
     }
 
-    // Filtro por género
     if (req.query.genre) {
       whereClause += ' AND m.genre = ?';
       queryParams.push(req.query.genre);
     }
 
-    // Obtener total de películas para paginación
     const totalMoviesResult = await query(
-      SELECT COUNT(*) as total FROM movies m WHERE 1=1 ${whereClause},
+      `SELECT COUNT(*) as total FROM movies m WHERE 1=1 ${whereClause}`,
       queryParams
     );
     const totalMovies = totalMoviesResult[0].total;
 
-    // Opciones de ordenamiento
     let orderClause = ' ORDER BY m.created_at DESC';
     if (req.query.sort) {
       const sortField = req.query.sort.replace('-', '');
       const sortDirection = req.query.sort.startsWith('-') ? 'DESC' : 'ASC';
-
-      // Lista blanca de campos ordenables
       const allowedSortFields = ['title', 'director', 'year', 'rating', 'created_at'];
 
       if (allowedSortFields.includes(sortField)) {
-        orderClause =  ORDER BY m.${sortField} ${sortDirection};
+        orderClause = ` ORDER BY m.${sortField} ${sortDirection}`;
       }
     }
 
-    // Copiar los parámetros para la consulta principal
-    const mainQueryParams = [...queryParams];
+    const mainQueryParams = [...queryParams, limit, offset];
 
-    // Añadir parámetros de paginación
-    mainQueryParams.push(limit, offset);
-
-
-// Consulta principal con parámetros manejados explícitamente
     const movies = await query(
-        SELECT m.*, u.username as creator_username
-         FROM movies m
-                JOIN users u ON m.user_id = u.id
-         WHERE 1=1 ${whereClause}
-               ${orderClause}
-           LIMIT ${limit} OFFSET ${offset},
-        queryParams
+      `SELECT m.*, u.username as creator_username
+       FROM movies m
+       JOIN users u ON m.user_id = u.id
+       WHERE 1=1 ${whereClause}
+       ${orderClause}
+       LIMIT ? OFFSET ?`,
+      mainQueryParams
     );
-
-    console.log('Películas recuperadas:', movies.length);
-    console.log('Primera película (si existe):', movies[0] || 'No hay películas');
 
     res.status(200).json({
       status: 'success',
@@ -98,9 +81,7 @@ exports.getAllMovies = async (req, res, next) => {
         totalResults: totalMovies,
         totalPages: Math.ceil(totalMovies / limit)
       },
-      data: {
-        movies
-      }
+      data: { movies }
     });
   } catch (error) {
     console.error('Error en getAllMovies:', error);
@@ -112,37 +93,20 @@ exports.getAllMovies = async (req, res, next) => {
 exports.getMovie = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    // Validar que id sea un número
     if (isNaN(id)) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'ID de película inválido'
-      });
+      return res.status(400).json({ status: 'error', message: 'ID de película inválido' });
     }
-    
-    // Consultar la película
+
     const movies = await query(
-      SELECT m.*, u.username as creator_username 
-       FROM movies m 
-       JOIN users u ON m.user_id = u.id 
-       WHERE m.id = ?,
+      `SELECT m.*, u.username as creator_username FROM movies m JOIN users u ON m.user_id = u.id WHERE m.id = ?`,
       [id]
     );
-    
+
     if (movies.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'No se encontró la película con el ID proporcionado'
-      });
+      return res.status(404).json({ status: 'error', message: 'No se encontró la película' });
     }
-    
-    res.status(200).json({
-      status: 'success',
-      data: {
-        movie: movies[0]
-      }
-    });
+
+    res.status(200).json({ status: 'success', data: { movie: movies[0] } });
   } catch (error) {
     console.error('Error en getMovie:', error);
     next(error);
@@ -152,48 +116,30 @@ exports.getMovie = async (req, res, next) => {
 // Crear una nueva película
 exports.createMovie = async (req, res, next) => {
   try {
-    // Validar datos de entrada
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: 'error',
-        errors: errors.array()
-      });
+      return res.status(400).json({ status: 'error', errors: errors.array() });
     }
-    
-    const title = xss(req.body.title.trim());
-    const director = xss(req.body.director.trim());
+
+    const title = sanitizeInput(req.body.title);
+    const director = sanitizeInput(req.body.director);
     const year = parseInt(req.body.year, 10);
-    const genre = xss(req.body.genre.trim());
-    const plot = req.body.plot ? xss(req.body.plot.trim()) : null;
-    const poster_url = req.body.poster_url ? xss(req.body.poster_url.trim()) : null;
+    const genre = sanitizeInput(req.body.genre);
+    const plot = req.body.plot ? sanitizeInput(req.body.plot) : null;
+    const poster_url = req.body.poster_url ? sanitizeInput(req.body.poster_url) : null;
     const rating = parseFloat(req.body.rating || 0);
 
-
-    
-    // Insertar la nueva película
     const result = await query(
-      INSERT INTO movies 
-       (title, director, year, genre, plot, poster_url, rating, user_id) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?),
-      [title, director, year, genre, plot || null, poster_url || null, rating || 0, req.user.id]
+      `INSERT INTO movies (title, director, year, genre, plot, poster_url, rating, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [title, director, year, genre, plot, poster_url, rating, req.user.id]
     );
-    
-    // Obtener la película creada
+
     const newMovie = await query(
-      SELECT m.*, u.username as creator_username 
-       FROM movies m 
-       JOIN users u ON m.user_id = u.id 
-       WHERE m.id = ?,
+      `SELECT m.*, u.username as creator_username FROM movies m JOIN users u ON m.user_id = u.id WHERE m.id = ?`,
       [result.insertId]
     );
-    
-    res.status(201).json({
-      status: 'success',
-      data: {
-        movie: newMovie[0]
-      }
-    });
+
+    res.status(201).json({ status: 'success', data: { movie: newMovie[0] } });
   } catch (error) {
     console.error('Error en createMovie:', error);
     next(error);
@@ -203,91 +149,45 @@ exports.createMovie = async (req, res, next) => {
 // Actualizar una película
 exports.updateMovie = async (req, res, next) => {
   try {
-    // Validar datos de entrada
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: 'error',
-        errors: errors.array()
-      });
+      return res.status(400).json({ status: 'error', errors: errors.array() });
     }
-    
+
     const { id } = req.params;
-    
-    // Validar que id sea un número
     if (isNaN(id)) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'ID de película inválido'
-      });
+      return res.status(400).json({ status: 'error', message: 'ID inválido' });
     }
-    
-    // Verificar que la película existe y pertenece al usuario actual
-    const existingMovies = await query(
-      'SELECT * FROM movies WHERE id = ?',
-      [id]
-    );
-    
-    if (existingMovies.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'No se encontró la película con el ID proporcionado'
-      });
+
+    const existing = await query('SELECT * FROM movies WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Película no encontrada' });
     }
-    
-    const movie = existingMovies[0];
-    
-    // Solo el creador o un administrador puede actualizar la película
+
+    const movie = existing[0];
     if (movie.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({
-        status: 'error',
-        message: 'No tienes permiso para actualizar esta película'
-      });
+      return res.status(403).json({ status: 'error', message: 'Sin permisos para actualizar' });
     }
-    
-    const title = xss(req.body.title.trim());
-    const director = xss(req.body.director.trim());
+
+    const title = sanitizeInput(req.body.title);
+    const director = sanitizeInput(req.body.director);
     const year = parseInt(req.body.year, 10);
-    const genre = xss(req.body.genre.trim());
-    const plot = req.body.plot ? xss(req.body.plot.trim()) : null;
-    const poster_url = req.body.poster_url ? xss(req.body.poster_url.trim()) : null;
+    const genre = sanitizeInput(req.body.genre);
+    const plot = req.body.plot ? sanitizeInput(req.body.plot) : null;
+    const poster_url = req.body.poster_url ? sanitizeInput(req.body.poster_url) : null;
     const rating = parseFloat(req.body.rating || 0);
 
-    
-    // Actualizar la película
     await query(
-      UPDATE movies 
-       SET title = ?, director = ?, year = ?, genre = ?, 
-           plot = ?, poster_url = ?, rating = ?, updated_at = NOW() 
-       WHERE id = ?,
-      [
-        title, 
-        director, 
-        year, 
-        genre, 
-        plot || null, 
-        poster_url || null, 
-        poster_url || null,
-        rating || 0,
-        id
-      ]
+      `UPDATE movies SET title = ?, director = ?, year = ?, genre = ?, plot = ?, poster_url = ?, rating = ?, updated_at = NOW() WHERE id = ?`,
+      [title, director, year, genre, plot, poster_url, rating, id]
     );
-    
-    // Obtener la película actualizada
+
     const updatedMovie = await query(
-      SELECT m.*, u.username as creator_username 
-       FROM movies m 
-       JOIN users u ON m.user_id = u.id 
-       WHERE m.id = ?,
+      `SELECT m.*, u.username as creator_username FROM movies m JOIN users u ON m.user_id = u.id WHERE m.id = ?`,
       [id]
     );
-    
-    res.status(200).json({
-      status: 'success',
-      data: {
-        movie: updatedMovie[0]
-      }
-    });
+
+    res.status(200).json({ status: 'success', data: { movie: updatedMovie[0] } });
   } catch (error) {
     console.error('Error en updateMovie:', error);
     next(error);
@@ -298,48 +198,22 @@ exports.updateMovie = async (req, res, next) => {
 exports.deleteMovie = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    // Validar que id sea un número
     if (isNaN(id)) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'ID de película inválido'
-      });
+      return res.status(400).json({ status: 'error', message: 'ID inválido' });
     }
-    
-    // Verificar que la película existe y pertenece al usuario actual
-    const existingMovies = await query(
-      'SELECT * FROM movies WHERE id = ?',
-      [id]
-    );
-    
-    if (existingMovies.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'No se encontró la película con el ID proporcionado'
-      });
+
+    const existing = await query('SELECT * FROM movies WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Película no encontrada' });
     }
-    
-    const movie = existingMovies[0];
-    
-    // Solo el creador o un administrador puede eliminar la película
+
+    const movie = existing[0];
     if (movie.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({
-        status: 'error',
-        message: 'No tienes permiso para eliminar esta película'
-      });
+      return res.status(403).json({ status: 'error', message: 'Sin permisos para eliminar' });
     }
-    
-    // Eliminar la película
-    await query(
-      'DELETE FROM movies WHERE id = ?',
-      [id]
-    );
-    
-    res.status(204).json({
-      status: 'success',
-      data: null
-    });
+
+    await query('DELETE FROM movies WHERE id = ?', [id]);
+    res.status(204).json({ status: 'success', data: null });
   } catch (error) {
     console.error('Error en deleteMovie:', error);
     next(error);
